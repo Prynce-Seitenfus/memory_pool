@@ -1,4 +1,4 @@
-# Prerequisites
+# Prerequisites & Dependency files
 *.d
 
 # Object files
@@ -33,6 +33,7 @@
 *.out
 *.app
 *.hex
+*.bin
 
 # Debug files
 *.dSYM/
@@ -47,8 +48,13 @@ bin/
 out/
 .cache/
 
-# IDE configurations
+# IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *~
+*.bak
+
+# OS generated
+.DS_Store
+Thumbs.db

@@ -6,12 +6,24 @@ A lightweight, deterministic, and freestanding dynamic memory allocator in C99, 
 
 ## Key Features
 
-* **Zero System Calls / Freestanding**: Operates completely within a fixed internal static buffer. Never invokes OS-level allocation primitives (`malloc`, `sbrk`, `mmap`).
+* **Zero System Calls / Freestanding**: Operates completely within a fixed internal static buffer. Never invokes OS-level allocation primitives (`malloc`, `sbrk`, `mmap`) per MISRA C:2012 Rule 21.3.
+* **Compile-Time Configurable Size**: Memory pool buffer size defaults to 8 KB and can be overridden at compile time via `-DMEMORY_POOL_SIZE=<bytes>` for constrained microcontrollers (e.g. 1 KB - 64 KB).
 * **Deterministic Execution**: Predictable latency with first-fit search and constant-time block splitting.
 * **Immediate Defragmentation**: Automatically coalesces adjacent free blocks during `memory_pool_free()` to mitigate fragmentation.
 * **Strict Alignment**: Enforces 8-byte boundary alignment on all allocated blocks.
 * **Standard Library Parity**: Mirrors the standard C memory API with namespaced equivalents (`malloc`, `free`, `calloc`, `realloc`).
 * **MISRA C:2012 Compliant**: Adheres to MISRA C:2012 guidelines, including defensive NULL-pointer checks, unsigned literals (`U` suffixes), explicit casts, and multiplication overflow protection in `calloc`.
+
+---
+
+## Configuration
+
+To customize the static pool capacity for your target microcontroller, define `MEMORY_POOL_SIZE` during compilation:
+
+```sh
+# Example: 16 KB static pool for STM32F4
+-DMEMORY_POOL_SIZE=16384
+```
 
 ---
 
