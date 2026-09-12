@@ -2,15 +2,20 @@
 #define MEMORY_POOL_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 /**
- * @brief Initializes the static memory pool.
+ * @brief Initializes the memory pool using a caller-provided memory buffer.
  *
- * This function must be called once before any other memory allocation
- * function is used. It sets up the initial free list and metadata
- * required to manage the static buffer.
+ * Sets up the initial free block and metadata required to manage the buffer.
+ * The caller is responsible for provisioning the storage (e.g. static array),
+ * allowing deterministic sizing tailored to the application's RAM budget.
+ *
+ * @param memory Pointer to the caller-allocated memory buffer.
+ * @param size   Total size of the memory buffer in bytes.
+ * @return true if initialized successfully, false if memory is NULL or size is insufficient.
  */
-void memory_pool_init(void);
+bool memory_pool_init(void* memory, size_t size);
 
 /**
  * @brief Allocates a block of memory from the static pool.

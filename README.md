@@ -6,24 +6,13 @@ A lightweight, deterministic, and freestanding dynamic memory allocator in C99, 
 
 ## Key Features
 
-* **Zero System Calls / Freestanding**: Operates completely within a fixed internal static buffer. Never invokes OS-level allocation primitives (`malloc`, `sbrk`, `mmap`) per MISRA C:2012 Rule 21.3.
-* **Compile-Time Configurable Size**: Memory pool buffer size defaults to 8 KB and can be overridden at compile time via `-DMEMORY_POOL_SIZE=<bytes>` for constrained microcontrollers (e.g. 1 KB - 64 KB).
+* **Zero System Calls / Freestanding**: Operates completely within a caller-provided memory buffer. Never invokes OS-level allocation primitives (`malloc`, `sbrk`, `mmap`) per MISRA C:2012 Rule 21.3.
+* **Deterministic RAM Footprint**: Eliminates hidden static `.bss` memory in the library. The application explicitly provisions the storage buffer sized to its exact RAM budget.
 * **Deterministic Execution**: Predictable latency with first-fit search and constant-time block splitting.
 * **Immediate Defragmentation**: Automatically coalesces adjacent free blocks during `memory_pool_free()` to mitigate fragmentation.
-* **Strict Alignment**: Enforces 8-byte boundary alignment on all allocated blocks.
+* **Strict Alignment**: Enforces 8-byte boundary alignment on all allocated blocks and handles unaligned input buffers safely.
 * **Standard Library Parity**: Mirrors the standard C memory API with namespaced equivalents (`malloc`, `free`, `calloc`, `realloc`).
 * **MISRA C:2012 Compliant**: Adheres to MISRA C:2012 guidelines, including defensive NULL-pointer checks, unsigned literals (`U` suffixes), explicit casts, and multiplication overflow protection in `calloc`.
-
----
-
-## Configuration
-
-To customize the static pool capacity for your target microcontroller, define `MEMORY_POOL_SIZE` during compilation:
-
-```sh
-# Example: 16 KB static pool for STM32F4
--DMEMORY_POOL_SIZE=16384
-```
 
 ---
 
@@ -33,10 +22,13 @@ The public API is declared in [`memory_pool.h`](memory_pool.h):
 
 ```c
 /**
- * @brief Initializes the static memory pool and internal block metadata.
- * Must be called once before any allocation.
+ * @brief Initializes the memory pool using a caller-provided memory buffer.
+ *
+ * @param memory Pointer to the caller-allocated memory buffer.
+ * @param size   Total size of the memory buffer in bytes.
+ * @return true if initialized successfully, false if parameters are invalid.
  */
-void memory_pool_init(void);
+bool memory_pool_init(void* memory, size_t size);
 
 /**
  * @brief Allocates an aligned memory block using a first-fit algorithm.
@@ -77,12 +69,18 @@ void* memory_pool_realloc(void* ptr, size_t size);
 ```c
 #include "memory_pool.h"
 #include <stdint.h>
-#include <stdio.h>
+#include <stdbool.h>
+
+/* Application allocates static pool storage according to its RAM budget */
+#define APP_POOL_SIZE (16U * 1024U) /* 16 KB */
+static uint8_t s_app_pool_storage[APP_POOL_SIZE] __attribute__((aligned(8)));
 
 int main(void)
 {
-    /* Initialize the pool once at startup */
-    memory_pool_init();
+    /* Initialize the pool with the application buffer */
+    if (!memory_pool_init(s_app_pool_storage, sizeof(s_app_pool_storage))) {
+        return -1;
+    }
 
     /* Allocate memory for 100 uint32_t elements */
     uint32_t* sensor_data = (uint32_t*)memory_pool_calloc(100U, sizeof(uint32_t));

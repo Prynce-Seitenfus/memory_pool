@@ -3,11 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#ifndef MEMORY_POOL_SIZE
-#define MEMORY_POOL_SIZE (1024U * 1024U)
-#endif
-
-#define POOL_SIZE MEMORY_POOL_SIZE
 #define ALIGNMENT 8U
 #define ALIGN_SIZE(size) (((size) + (ALIGNMENT - 1U)) & ~((size_t)(ALIGNMENT - 1U)))
 
@@ -25,24 +20,34 @@ typedef struct BlockMeta {
     struct BlockMeta* prev;
 } BlockMeta;
 
-/* Static pool storage union to guarantee 8-byte alignment per MISRA Rule 11.3 */
-typedef union PoolStorage {
-    uint8_t buffer[POOL_SIZE];
-    uint64_t alignment_force;
-} PoolStorage;
-
-static PoolStorage pool_storage;
-#define pool_buffer (pool_storage.buffer)
-
 static BlockMeta* block_list_head = NULL;
 
-void memory_pool_init(void)
+bool memory_pool_init(void* memory, size_t size)
 {
-    block_list_head = (BlockMeta*)(void*)pool_buffer;
-    block_list_head->size = POOL_SIZE - sizeof(BlockMeta);
+    if ((memory == NULL) || (size < (sizeof(BlockMeta) + ALIGNMENT))) {
+        return false;
+    }
+
+    uintptr_t raw_addr = (uintptr_t)memory;
+    uintptr_t aligned_addr = (raw_addr + (ALIGNMENT - 1U)) & ~((uintptr_t)(ALIGNMENT - 1U));
+    size_t padding = (size_t)(aligned_addr - raw_addr);
+
+    if (size <= (padding + sizeof(BlockMeta))) {
+        return false;
+    }
+
+    size_t usable_size = (size - padding) & ~((size_t)(ALIGNMENT - 1U));
+    if (usable_size < (sizeof(BlockMeta) + ALIGNMENT)) {
+        return false;
+    }
+
+    block_list_head = (BlockMeta*)(void*)aligned_addr;
+    block_list_head->size = usable_size - sizeof(BlockMeta);
     block_list_head->is_free = true;
     block_list_head->next = NULL;
     block_list_head->prev = NULL;
+
+    return true;
 }
 
 /* Helper to split a block and forward-coalesce the remainder if possible */
